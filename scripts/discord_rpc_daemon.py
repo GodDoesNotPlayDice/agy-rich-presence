@@ -639,18 +639,15 @@ def run_daemon():
                 small_status_text = "Ready (Waiting for prompt)"
             elif num_working == 1:
                 # Exactly 1 project is being worked on
-                working_proj_name = working_projects[0]
-                if num_total > 1:
-                    details = f"Working on 1 project ({working_proj_name})"
-                    large_text = f"Projects ({num_total}): {', '.join(all_unique_projects)} | Working: {working_proj_name}"
-                else:
-                    details = f"Working on {working_proj_name}"
-                    large_text = f"{app_name} ({working_proj_name})"
+                action_suffix = f" · {current_action}" if current_action and current_action not in ("Idle - Ready", "Ready") else ""
+                details = f"Working on 1 project{action_suffix}"
+                large_text = f"Projects ({num_total}): {', '.join(all_unique_projects)}" if num_total > 1 else app_name
                 small_status_text = current_action or status_text or "Agent working..."
             else:
                 # 2 or more projects actively being worked on simultaneously
-                details = f"Working on {num_working} projects"
-                large_text = f"Projects ({num_total}) | Working on: {', '.join(working_projects)}"
+                action_suffix = f" · {current_action}" if current_action and current_action not in ("Idle - Ready", "Ready") else ""
+                details = f"Working on {num_working} projects{action_suffix}"
+                large_text = f"Projects ({num_total}): {', '.join(all_unique_projects)}" if num_total > 1 else app_name
                 small_status_text = current_action or status_text or f"Working on {num_working} projects"
 
             # 2. Activity metrics counters (edits, cmds, searches, reads, thinks, time deep)
