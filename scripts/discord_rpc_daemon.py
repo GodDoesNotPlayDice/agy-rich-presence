@@ -28,7 +28,7 @@ DEFAULT_CONFIG_FILE = os.path.join(PLUGIN_ROOT, "config.json")
 
 # Verified assets compatible with Discord image proxy
 LOGO_GEMINI = "https://i.imgur.com/YrOxqad.png"
-LOGO_ANTIGRAVITY = "https://i.imgur.com/K18LV68.png"
+LOGO_ANTIGRAVITY = "https://i.imgur.com/XSSjEth.png"
 
 ICON_IDLE = "https://i.imgur.com/uixaTPM.png"       # 🟢 Minimalist Green Dot
 ICON_WORKING = "https://i.imgur.com/jjXT03E.png"    # 🟡 Minimalist Yellow Dot
