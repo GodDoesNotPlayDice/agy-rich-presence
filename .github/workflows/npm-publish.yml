@@ -1,0 +1,67 @@
+name: Publish to NPM
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Publish Package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Check version against NPM registry
+        id: check_version
+        run: |
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          LOCAL_VERSION=$(node -p "require('./package.json').version")
+          echo "Package: $PACKAGE_NAME"
+          echo "Local Version: $LOCAL_VERSION"
+
+          # Query npm for published versions
+          PUBLISHED_VERSIONS=$(npm view "$PACKAGE_NAME" versions --json 2>/dev/null || echo "[]")
+          if [ -z "$PUBLISHED_VERSIONS" ]; then
+            PUBLISHED_VERSIONS="[]"
+          fi
+
+          # Check if LOCAL_VERSION exists in PUBLISHED_VERSIONS
+          IS_PUBLISHED=$(node -e "
+            let versions = [];
+            try {
+              versions = $PUBLISHED_VERSIONS;
+            } catch (e) {
+              versions = [];
+            }
+            const target = '$LOCAL_VERSION';
+            const arr = Array.isArray(versions) ? versions : [versions];
+            console.log(arr.includes(target) ? 'true' : 'false');
+          ")
+
+          if [ "$IS_PUBLISHED" = "true" ]; then
+            echo "::notice ::Version $LOCAL_VERSION is already published on npm. Skipping publication."
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+          else
+            echo "::notice ::Version $LOCAL_VERSION is new. Preparing to publish..."
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish to NPM
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
