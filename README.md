@@ -1,71 +1,74 @@
 # Antigravity Discord Rich Presence 🚀
 
-> Discord Rich Presence para **Google Antigravity CLI** (`agy`). Muestra automáticamente tu proyecto activo, estado del agente y tiempo transcurrido en tu perfil de Discord.
+> Real-time Discord Rich Presence integration for **Google Antigravity CLI** (`agy`). Displays your active project, agent state, and elapsed session time on your Discord profile.
 
 ---
 
-## ✨ Características
+## ✨ Features
 
-- 🌌 **Logo de Gemini Minimalista:** Estrella oficial de Google Gemini estilizada y centrada con márgenes limpios.
-- 🚦 **Puntos de Estado Sutiles:** Badges circulares minimalistas que cambian en tiempo real:
-  - 🟢 **Verde:** Listo / Esperando prompt (`Idle`).
-  - 🟡 **Amarillo / Dorado:** Agente pensando / generando respuesta.
-  - 🟠 **Naranja:** Ejecutando herramientas o comandos en la terminal.
-- 🪟 **Cambio Dinámico por Ventana:** Si tienes múltiples terminales de Alacritty (u otras terminales) abiertas con diferentes proyectos, el Rich Presence cambia automáticamente al proyecto de la terminal que estés enfocando.
-- ⚡ **Auto-standby y Cierre Inmediato:** Al cerrar tus terminales, el estado de Discord se limpia en ~0.8s. Al volver a abrir `agy`, reaparece de inmediato sin tener que enviar un prompt primero.
-- 🐧 **Compatibilidad Universal:** Funciona con Discord en **Flatpak**, **Snap**, paquetes nativos (.deb, Arch/AUR, etc.).
-- 📦 **Cero dependencias:** No requiere `pip` ni paquetes de Python externos (funciona 100% con la librería estándar de Python 3).
+- 🌌 **Minimalist Gemini Logo:** Official, cleanly centered Google Gemini star asset designed to look sleek and non-intrusive on Discord.
+- 🚦 **Subtle Status Indicators:** Minimalist colored dots that update dynamically with agent state:
+  - 🟢 **Green:** Idle / Ready for prompt.
+  - 🟡 **Yellow / Amber:** Agent thinking / generating response.
+  - 🟠 **Orange:** Running tools, shell commands, or inspecting files.
+- 🪟 **Dynamic Window & Focus Tracking:** Working on multiple projects across different terminal windows (Alacritty, Kitty, GNOME Terminal, etc.)? Rich Presence automatically switches to whichever terminal window you currently have focused.
+- ⚡ **Instant Startup & Standby:**
+  - Fires immediately upon opening `agy` using the `SessionStart` hook (no prompt required to activate).
+  - Clears Discord presence immediately (~0.8s) when all terminal windows are closed and enters low-resource standby mode.
+  - Wakes up in less than 1 second when any new `agy` session begins.
+- 🐧 **Universal Discord Compatibility:** Automatically detects Discord running on Linux via **Flatpak**, **Snap**, native packages (`.deb`, Arch/AUR), or tarballs.
+- 📦 **Zero External Dependencies:** Built 100% on the Python 3 standard library. No `pip install`, no virtual environments, no bloat.
 
 ---
 
-## 🚀 Instalación Rápida
+## 🚀 Quick Installation
 
-Elige el método que prefieras:
+Choose whichever method you prefer:
 
-### Opción A: Vía `npx` (Recomendada)
-Si tienes Node.js instalado, solo ejecuta:
+### Option A: Via `npx` (Recommended)
+If you have Node.js installed:
 ```bash
 npx agy-rich-presence
 ```
 
-### Opción B: Vía `curl` (Un solo comando)
+### Option B: Via `curl` (One-liner)
 ```bash
 curl -fsSL https://raw.githubusercontent.com/GodDoesNotPlayDice/agy-rich-presence/main/install.sh | bash
 ```
 
-### Opción C: Clonado Manual de Git
+### Option C: Manual Git Clone
 ```bash
 git clone https://github.com/GodDoesNotPlayDice/agy-rich-presence.git ~/.gemini/config/plugins/agy-rich-presence
 ```
 
 ---
 
-## 🛠️ Comandos de Utilidad (`npx`)
+## 🛠️ CLI Management Commands
 
-Una vez instalado, puedes gestionar el plugin fácilmente:
+Once installed, you can manage the plugin anytime using the CLI:
 
 ```bash
-# Ver estado del daemon, socket de Discord y proyectos activos
+# Check daemon, Discord socket, and active session status
 npx agy-rich-presence status
 
-# Iniciar manualmente el servicio
+# Manually start the background daemon
 npx agy-rich-presence start
 
-# Detener el servicio
+# Stop the daemon and clear Discord presence
 npx agy-rich-presence stop
 
-# Reiniciar
+# Restart the daemon
 npx agy-rich-presence restart
 
-# Desinstalar completamente
+# Completely remove the plugin and clean up
 npx agy-rich-presence uninstall
 ```
 
 ---
 
-## ⚙️ Personalización
+## ⚙️ Customization
 
-Puedes personalizar el nombre de la aplicación o tu propio Discord Application ID creando o editando `~/.gemini/antigravity-cli/discord_rpc_config.json`:
+You can customize the presence title or use your own Discord Application ID by editing `~/.gemini/antigravity-cli/discord_rpc_config.json`:
 
 ```json
 {
@@ -74,10 +77,32 @@ Puedes personalizar el nombre de la aplicación o tu propio Discord Application 
 }
 ```
 
-> **Nota:** Si creas una aplicación personalizada en el [Discord Developer Portal](https://discord.com/developers/applications), coloca su Application ID en `"client_id"` y el nombre en `"app_name"`.
+> **Note:** If you create a custom application in the [Discord Developer Portal](https://discord.com/developers/applications), put your Application ID in `"client_id"` and your desired name in `"app_name"`.
 
 ---
 
-## 📄 Licencia
+## 📁 Repository Structure
+
+```text
+agy-rich-presence/
+├── bin/
+│   └── cli.js                  # CLI installer and management tool
+├── scripts/
+│   ├── discord_rpc_daemon.py  # Background daemon (standby, X11 focus tracking)
+│   └── discord_rpc_hook.py    # Antigravity lifecycle hooks handler
+├── config.json                 # Default configuration template
+├── plugin.json                 # Official Antigravity plugin manifest
+├── hooks.json                  # Lifecycle hook specifications
+├── package.json                # npm package definition
+├── install.sh                  # Standalone shell installer
+├── uninstall.sh                # Standalone shell uninstaller
+├── .gitignore
+├── LICENSE                     # MIT License
+└── README.md                   # Project documentation
+```
+
+---
+
+## 📄 License
 
 MIT License © 2026 Vicente Vasquez ([GodDoesNotPlayDice](https://github.com/GodDoesNotPlayDice))
