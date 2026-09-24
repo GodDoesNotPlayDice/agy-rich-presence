@@ -32,6 +32,10 @@ LOGO_ANTIGRAVITY = "https://i.imgur.com/XSSjEth.png"
 
 ICON_IDLE = "https://i.imgur.com/uixaTPM.png"       # 🟢 Minimalist Green Dot
 ICON_WORKING = "https://i.imgur.com/jjXT03E.png"    # 🟡 Minimalist Yellow Dot
+ICON_READING = "https://i.imgur.com/5j7bhv4.png"    # 🔵 Minimalist Blue Dot
+ICON_EDITING = "https://i.imgur.com/FsdDnuj.png"    # 🟣 Minimalist Purple Dot
+ICON_EXECUTING = "https://i.imgur.com/4axLLtM.png"  # 🟠 Minimalist Orange Dot
+ICON_SEARCHING = "https://i.imgur.com/fUGBnFQ.png"  # 🔷 Minimalist Cyan Dot
 ICON_TOOL = "https://i.imgur.com/4axLLtM.png"       # 🟠 Minimalist Orange Dot
 
 DEFAULT_CLIENT_ID_ANTIGRAVITY = "1552496441656873172"
@@ -211,12 +215,24 @@ class DiscordRPC:
             if not self.connect():
                 return False
         try:
-            if status == "tool":
-                small_img = ICON_TOOL
-                small_txt = status_text or "Running tool"
+            if status == "reading":
+                small_img = ICON_READING
+                small_txt = status_text or "Reading files"
+            elif status == "editing":
+                small_img = ICON_EDITING
+                small_txt = status_text or "Editing code"
+            elif status == "executing":
+                small_img = ICON_EXECUTING
+                small_txt = status_text or "Executing command"
+            elif status == "searching":
+                small_img = ICON_SEARCHING
+                small_txt = status_text or "Searching"
             elif status == "working":
                 small_img = ICON_WORKING
-                small_txt = status_text or "Agent thinking..."
+                small_txt = status_text or "Thinking / Generating response"
+            elif status == "tool":
+                small_img = ICON_TOOL
+                small_txt = status_text or "Running tool"
             else:
                 small_img = ICON_IDLE
                 small_txt = status_text or "Ready (Waiting for prompt)"
@@ -553,12 +569,25 @@ def run_daemon():
             project_name = target_agy["project"]
             details = f"Project: {project_name}"
 
-            if status == "working":
-                state = sess.get("state", "Agent Working...")
-            elif status == "tool":
-                state = sess.get("state", "Running tool...")
-            else:
-                state = sess.get("state", "Idle - Ready")
+            state = sess.get("state")
+            if not state:
+                if status == "reading":
+                    state = "Reading files..."
+                elif status == "editing":
+                    state = "Editing code..."
+                elif status == "executing":
+                    state = "Executing command..."
+                elif status == "searching":
+                    state = "Searching..."
+                elif status == "working":
+                    state = "Thinking..."
+                elif status == "tool":
+                    state = "Running tool..."
+                else:
+                    state = "Idle - Ready"
+
+            if len(state) > 128:
+                state = state[:125] + "..."
 
             start_ts = sess.get("start_timestamp", default_session_start)
 

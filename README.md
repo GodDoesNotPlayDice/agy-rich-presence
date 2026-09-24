@@ -6,11 +6,14 @@
 
 ## ✨ Features
 
-- 🌌 **Minimalist Gemini Logo:** Official, cleanly centered Google Gemini star asset designed to look sleek and non-intrusive on Discord.
-- 🚦 **Subtle Status Indicators:** Minimalist colored dots that update dynamically with agent state:
-  - 🟢 **Green:** Idle / Ready for prompt.
-  - 🟡 **Yellow / Amber:** Agent thinking / generating response.
-  - 🟠 **Orange:** Running tools, shell commands, or inspecting files.
+- 🌌 **Dual Logo Themes:** Choose between the official Google Antigravity colorful arch logo or the minimalist Google Gemini 4-pointed gradient star with instant hot-reloading (`npx agy-rich-presence icon [antigravity|gemini]`).
+- 🚦 **Granular Agent Activity & Status Dots:** Real-time state strings and minimalist colored status dots that dynamically reflect exactly what the agent is doing:
+  - 🟢 **Green (`Ready`):** Idle, waiting for user prompt (`Idle - Ready`).
+  - 🟡 **Yellow (`Thinking`):** Analyzing context and formulating responses (`Thinking...`).
+  - 🔵 **Blue (`Reading`):** Inspecting and viewing source files (`Reading app.py`).
+  - 🟣 **Purple (`Editing`):** Modifying and writing code (`Editing utils.js`, `Writing component.tsx`).
+  - 🟠 **Orange (`Executing`):** Running terminal commands, tests, or background tasks (`Running: npm test`).
+  - 🔷 **Cyan (`Searching`):** Searching the web or exploring the codebase graph (`Searching: <query>`).
 - 🪟 **Dynamic Window & Focus Tracking:** Working on multiple projects across different terminal windows (Alacritty, Kitty, GNOME Terminal, etc.)? Rich Presence automatically switches to whichever terminal window you currently have focused.
 - 🪟 **True Cross-Platform Support:**
   - **Linux:** Native packages, Flatpak, Snap, X11 focus tracking.

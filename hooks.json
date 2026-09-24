@@ -27,6 +27,18 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/discord_rpc_hook.py PostToolUse",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "PostInvocation": [
       {
         "type": "command",
