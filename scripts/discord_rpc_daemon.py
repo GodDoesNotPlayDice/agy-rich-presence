@@ -50,8 +50,76 @@ def load_user_config():
                 pass
     return DEFAULT_CLIENT_ID, DEFAULT_APP_NAME
 
+if sys.platform == "win32":
+    try:
+        import _winapi
+    except ImportError:
+        _winapi = None
+else:
+    _winapi = None
+
+class WindowsPipeSocket:
+    """Wrapper around Windows Named Pipe to emulate socket sendall/recv/close."""
+    def __init__(self, pipe_path):
+        self.pipe_path = pipe_path
+        self.handle = None
+        self.fp = None
+        if _winapi:
+            self.handle = _winapi.CreateFile(
+                pipe_path,
+                _winapi.GENERIC_READ | _winapi.GENERIC_WRITE,
+                0,
+                _winapi.NULL,
+                _winapi.OPEN_EXISTING,
+                0,
+                _winapi.NULL
+            )
+        else:
+            self.fp = open(pipe_path, "r+b", buffering=0)
+
+    def sendall(self, data):
+        if self.handle:
+            _winapi.WriteFile(self.handle, data)
+        elif self.fp:
+            self.fp.write(data)
+            self.fp.flush()
+
+    def recv(self, length):
+        if self.handle:
+            buf = bytearray()
+            while len(buf) < length:
+                chunk, _ = _winapi.ReadFile(self.handle, length - len(buf))
+                if not chunk:
+                    break
+                buf.extend(chunk)
+            return bytes(buf)
+        elif self.fp:
+            return self.fp.read(length)
+        return b""
+
+    def close(self):
+        if self.handle:
+            try:
+                _winapi.CloseHandle(self.handle)
+            except Exception:
+                pass
+            self.handle = None
+        if self.fp:
+            try:
+                self.fp.close()
+            except Exception:
+                pass
+            self.fp = None
+
 def find_discord_socket():
-    uid = os.getuid()
+    if sys.platform == "win32":
+        for i in range(10):
+            pipe_path = rf"\\.\pipe\discord-ipc-{i}"
+            if os.path.exists(pipe_path):
+                return pipe_path
+        return None
+
+    uid = os.getuid() if hasattr(os, "getuid") else 1000
     candidates = [
         f"/run/user/{uid}/app/com.discordapp.Discord/discord-ipc-0",
         f"/run/user/{uid}/discord-ipc-0",
@@ -87,9 +155,12 @@ class DiscordRPC:
             self.connected = False
             return False
         try:
-            self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.sock.settimeout(2.0)
-            self.sock.connect(sock_path)
+            if sys.platform == "win32":
+                self.sock = WindowsPipeSocket(sock_path)
+            else:
+                self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                self.sock.settimeout(2.0)
+                self.sock.connect(sock_path)
 
             payload = json.dumps({"v": 1, "client_id": self.client_id}).encode("utf-8")
             self.sock.sendall(struct.pack("<II", 0, len(payload)) + payload)
@@ -183,7 +254,39 @@ class DiscordRPC:
         finally:
             self.close()
 
+def is_pid_alive(pid):
+    try:
+        pid = int(pid)
+        if sys.platform == "win32":
+            import ctypes
+            kernel32 = ctypes.windll.kernel32
+            handle = kernel32.OpenProcess(0x1000, False, pid)
+            if handle:
+                kernel32.CloseHandle(handle)
+                return True
+            return False
+        else:
+            if os.path.exists(f"/proc/{pid}"):
+                return True
+            os.kill(pid, 0)
+            return True
+    except Exception:
+        return False
+
 def get_active_window_pid():
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            user32 = ctypes.windll.user32
+            hwnd = user32.GetForegroundWindow()
+            if not hwnd:
+                return None
+            pid = ctypes.c_ulong()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            return pid.value
+        except Exception:
+            return None
+
     display = os.environ.get("DISPLAY", ":0")
     env = dict(os.environ, DISPLAY=display)
     if "XAUTHORITY" not in env:
@@ -205,6 +308,45 @@ def get_active_window_pid():
     return None
 
 def get_descendants(pid):
+    if sys.platform == "win32":
+        descendants = []
+        try:
+            import ctypes
+            from ctypes import wintypes
+            class PROCESSENTRY32(ctypes.Structure):
+                _fields_ = [
+                    ("dwSize", wintypes.DWORD),
+                    ("cntUsage", wintypes.DWORD),
+                    ("th32ProcessID", wintypes.DWORD),
+                    ("th32DefaultHeapID", ctypes.c_size_t),
+                    ("th32ModuleID", wintypes.DWORD),
+                    ("cntThreads", wintypes.DWORD),
+                    ("th32ParentProcessID", wintypes.DWORD),
+                    ("pcPriClassBase", ctypes.c_long),
+                    ("dwFlags", wintypes.DWORD),
+                    ("szExeFile", ctypes.c_char * 260)
+                ]
+            kernel32 = ctypes.windll.kernel32
+            hSnapshot = kernel32.CreateToolhelp32Snapshot(0x00000002, 0)
+            if hSnapshot != -1:
+                pe = PROCESSENTRY32()
+                pe.dwSize = ctypes.sizeof(PROCESSENTRY32)
+                success = kernel32.Process32First(hSnapshot, ctypes.byref(pe))
+                parent_map = {}
+                while success:
+                    parent_map.setdefault(pe.th32ParentProcessID, []).append(pe.th32ProcessID)
+                    success = kernel32.Process32Next(hSnapshot, ctypes.byref(pe))
+                kernel32.CloseHandle(hSnapshot)
+                queue = [pid]
+                while queue:
+                    curr = queue.pop(0)
+                    for child in parent_map.get(curr, []):
+                        descendants.append(child)
+                        queue.append(child)
+        except Exception:
+            pass
+        return descendants
+
     descendants = []
     try:
         children_file = f"/proc/{pid}/task/{pid}/children"
@@ -230,6 +372,8 @@ def get_descendants(pid):
     return descendants
 
 def is_foreground_process(pid):
+    if sys.platform == "win32":
+        return True
     try:
         with open(f"/proc/{pid}/stat") as f:
             parts = f.read().split()
@@ -238,7 +382,29 @@ def is_foreground_process(pid):
         return False
 
 def get_all_running_agy():
-    uid = os.getuid()
+    if sys.platform == "win32":
+        results = {}
+        if os.path.exists(STATE_FILE):
+            try:
+                with open(STATE_FILE, "r") as sf:
+                    data = json.load(sf)
+                    for spid, sess in data.get("sessions", {}).items():
+                        try:
+                            ipid = int(spid)
+                            if is_pid_alive(ipid):
+                                results[ipid] = {
+                                    "pid": ipid,
+                                    "cwd": "",
+                                    "project": sess.get("project", "Antigravity CLI"),
+                                    "is_foreground": True
+                                }
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+        return results
+
+    uid = os.getuid() if hasattr(os, "getuid") else 1000
     results = {}
     for entry in os.listdir("/proc"):
         if entry.isdigit():
@@ -283,8 +449,11 @@ def run_daemon():
                 pass
         sys.exit(0)
 
-    signal.signal(signal.SIGTERM, cleanup)
     signal.signal(signal.SIGINT, cleanup)
+    if hasattr(signal, "SIGTERM"):
+        signal.signal(signal.SIGTERM, cleanup)
+    if hasattr(signal, "SIGBREAK"):
+        signal.signal(signal.SIGBREAK, cleanup)
 
     last_active_pid = None
     last_sent_activity = None

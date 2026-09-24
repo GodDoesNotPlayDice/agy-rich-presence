@@ -16,7 +16,28 @@ CONFIG_DIR = os.path.expanduser("~/.gemini/antigravity-cli")
 STATE_FILE = os.path.join(CONFIG_DIR, "discord_rpc_state.json")
 PID_FILE = os.path.join(CONFIG_DIR, "discord_rpc_daemon.pid")
 
+def is_pid_alive(pid):
+    try:
+        pid = int(pid)
+        if sys.platform == "win32":
+            import ctypes
+            kernel32 = ctypes.windll.kernel32
+            handle = kernel32.OpenProcess(0x1000, False, pid)
+            if handle:
+                kernel32.CloseHandle(handle)
+                return True
+            return False
+        else:
+            if os.path.exists(f"/proc/{pid}"):
+                return True
+            os.kill(pid, 0)
+            return True
+    except Exception:
+        return False
+
 def get_agy_ancestor():
+    if sys.platform == "win32":
+        return os.getppid()
     curr = os.getppid()
     while curr > 1:
         try:
@@ -37,26 +58,28 @@ def is_daemon_running():
     try:
         with open(PID_FILE, "r") as f:
             pid = int(f.read().strip())
-        os.kill(pid, 0)
-        return True
+        return is_pid_alive(pid)
     except (ValueError, OSError):
         return False
 
 def ensure_daemon():
     if not is_daemon_running() and os.path.exists(DAEMON_SCRIPT):
         try:
-            display = os.environ.get("DISPLAY", ":0")
-            env = dict(os.environ, DISPLAY=display)
-            if "XAUTHORITY" not in env:
-                env["XAUTHORITY"] = os.path.expanduser("~/.Xauthority")
-            subprocess.Popen(
-                [sys.executable, DAEMON_SCRIPT],
-                start_new_session=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                stdin=subprocess.DEVNULL,
-                env=env
-            )
+            kwargs = {
+                "stdout": subprocess.DEVNULL,
+                "stderr": subprocess.DEVNULL,
+                "stdin": subprocess.DEVNULL
+            }
+            if sys.platform == "win32":
+                kwargs["creationflags"] = 0x00000008 | 0x08000000
+            else:
+                kwargs["start_new_session"] = True
+                display = os.environ.get("DISPLAY", ":0")
+                env = dict(os.environ, DISPLAY=display)
+                if "XAUTHORITY" not in env:
+                    env["XAUTHORITY"] = os.path.expanduser("~/.Xauthority")
+                kwargs["env"] = env
+            subprocess.Popen([sys.executable, DAEMON_SCRIPT], **kwargs)
         except Exception:
             pass
 
@@ -138,7 +161,7 @@ def main():
     for spid, sval in sessions.items():
         try:
             pid_int = int(spid)
-            if os.path.exists(f"/proc/{pid_int}"):
+            if is_pid_alive(pid_int):
                 clean_sessions[spid] = sval
         except Exception:
             pass

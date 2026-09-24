@@ -12,12 +12,15 @@
   - 🟡 **Yellow / Amber:** Agent thinking / generating response.
   - 🟠 **Orange:** Running tools, shell commands, or inspecting files.
 - 🪟 **Dynamic Window & Focus Tracking:** Working on multiple projects across different terminal windows (Alacritty, Kitty, GNOME Terminal, etc.)? Rich Presence automatically switches to whichever terminal window you currently have focused.
+- 🪟 **True Cross-Platform Support:**
+  - **Linux:** Native packages, Flatpak, Snap, X11 focus tracking.
+  - **Windows (Native & WSL):** PowerShell, Windows Terminal, CMD via Win32 Named Pipes and native User32 focus detection.
+  - **macOS:** Standard Unix domain sockets.
 - ⚡ **Instant Startup & Standby:**
   - Fires immediately upon opening `agy` using the `SessionStart` hook (no prompt required to activate).
   - Clears Discord presence immediately (~0.8s) when all terminal windows are closed and enters low-resource standby mode.
   - Wakes up in less than 1 second when any new `agy` session begins.
-- 🐧 **Universal Discord Compatibility:** Automatically detects Discord running on Linux via **Flatpak**, **Snap**, native packages (`.deb`, Arch/AUR), or tarballs.
-- 📦 **Zero External Dependencies:** Built 100% on the Python 3 standard library. No `pip install`, no virtual environments, no bloat.
+- 📦 **Zero External Dependencies:** Built 100% on the Python 3 standard library (`socket`, `_winapi`, `ctypes`). No `pip install`, no virtual environments, no bloat.
 
 ---
 
@@ -25,7 +28,7 @@
 
 Choose whichever method you prefer:
 
-### Option A: Via `npx` (Recommended)
+### Option A: Via `npx` (Universal - Linux & Windows)
 Run directly from GitHub without cloning:
 ```bash
 npx github:GodDoesNotPlayDice/agy-rich-presence
@@ -35,7 +38,13 @@ Or via the global npm package:
 npx agy-rich-presence
 ```
 
-### Option B: Via `curl` (One-liner)
+### Option B: Windows (PowerShell One-liner)
+Open PowerShell and run:
+```powershell
+irm https://raw.githubusercontent.com/GodDoesNotPlayDice/agy-rich-presence/main/install.ps1 | iex
+```
+
+### Option C: Linux / macOS (`curl` One-liner)
 ```bash
 curl -fsSL https://raw.githubusercontent.com/GodDoesNotPlayDice/agy-rich-presence/main/install.sh | bash
 ```
@@ -116,8 +125,10 @@ agy-rich-presence/
 ├── plugin.json                 # Official Antigravity plugin manifest
 ├── hooks.json                  # Lifecycle hook specifications
 ├── package.json                # npm package definition
-├── install.sh                  # Standalone shell installer
-├── uninstall.sh                # Standalone shell uninstaller
+├── install.sh                  # Linux/macOS shell installer
+├── uninstall.sh                # Linux/macOS shell uninstaller
+├── install.ps1                 # Windows PowerShell installer
+├── uninstall.ps1               # Windows PowerShell uninstaller
 ├── .gitignore
 ├── LICENSE                     # MIT License
 └── README.md                   # Project documentation

@@ -35,6 +35,21 @@ function copyRecursive(src, dest) {
   }
 }
 
+function getPythonCommand() {
+  if (process.platform === 'win32') {
+    try {
+      execSync('python --version', { stdio: 'ignore' });
+      return 'python';
+    } catch {}
+    try {
+      execSync('py -3 --version', { stdio: 'ignore' });
+      return 'py';
+    } catch {}
+    return 'python';
+  }
+  return 'python3';
+}
+
 function isRunning(pid) {
   try {
     process.kill(pid, 0);
@@ -65,15 +80,21 @@ function startDaemon() {
     console.log(`ℹ️  Daemon is already running (PID: ${pid})`);
     return;
   }
-  const env = Object.assign({}, process.env);
-  if (!env.DISPLAY) env.DISPLAY = ':0';
-  if (!env.XAUTHORITY) env.XAUTHORITY = path.join(HOME, '.Xauthority');
-
-  const child = spawn('python3', [daemonScript], {
+  const pyCmd = getPythonCommand();
+  const spawnOpts = {
     detached: true,
-    stdio: 'ignore',
-    env
-  });
+    stdio: 'ignore'
+  };
+  if (process.platform === 'win32') {
+    spawnOpts.windowsHide = true;
+  } else {
+    const env = Object.assign({}, process.env);
+    if (!env.DISPLAY) env.DISPLAY = ':0';
+    if (!env.XAUTHORITY) env.XAUTHORITY = path.join(HOME, '.Xauthority');
+    spawnOpts.env = env;
+  }
+
+  const child = spawn(pyCmd, [daemonScript], spawnOpts);
   child.unref();
   console.log('🚀 Started Discord RPC daemon in background.');
 }
@@ -82,7 +103,11 @@ function stopDaemon() {
   const pid = getDaemonPid();
   if (pid) {
     try {
-      process.kill(pid, 'SIGTERM');
+      if (process.platform === 'win32') {
+        try { execSync(`taskkill /F /PID ${pid}`, { stdio: 'ignore' }); } catch {}
+      } else {
+        process.kill(pid, 'SIGTERM');
+      }
       console.log(`🛑 Stopped daemon (PID: ${pid})`);
     } catch (e) {
       console.error(`Error stopping daemon: ${e.message}`);
@@ -93,6 +118,13 @@ function stopDaemon() {
 }
 
 function checkDiscord() {
+  if (process.platform === 'win32') {
+    for (let i = 0; i < 10; i++) {
+      const pipe = `\\\\.\\pipe\\discord-ipc-${i}`;
+      if (fs.existsSync(pipe)) return pipe;
+    }
+    return null;
+  }
   const uid = process.getuid ? process.getuid() : 1000;
   const sockets = [
     `/run/user/${uid}/app/com.discordapp.Discord/discord-ipc-0`,
@@ -107,12 +139,26 @@ switch (command) {
   case 'setup': {
     console.log('\n🌟 Installing Antigravity Discord Rich Presence...\n');
     copyRecursive(REPO_ROOT, PLUGIN_TARGET);
+
+    // Adapt hooks.json for Windows if necessary
+    if (process.platform === 'win32') {
+      const targetHooks = path.join(PLUGIN_TARGET, 'hooks.json');
+      if (fs.existsSync(targetHooks)) {
+        try {
+          const pyCmd = getPythonCommand();
+          let content = fs.readFileSync(targetHooks, 'utf-8');
+          content = content.replace(/python3/g, pyCmd);
+          fs.writeFileSync(targetHooks, content);
+        } catch {}
+      }
+    }
+
     console.log(`✅ Plugin files installed to:`);
     console.log(`   ${PLUGIN_TARGET}\n`);
 
     const discSock = checkDiscord();
     if (discSock) {
-      console.log(`✅ Discord IPC socket detected: ${discSock}`);
+      console.log(`✅ Discord IPC detected: ${discSock}`);
     } else {
       console.log(`⚠️  Discord is not running right now. Open Discord to see your rich presence.`);
     }
