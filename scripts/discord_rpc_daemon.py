@@ -121,13 +121,13 @@ class DiscordRPC:
         try:
             if status == "tool":
                 small_img = ICON_TOOL
-                small_txt = status_text or "Ejecutando herramienta"
+                small_txt = status_text or "Running tool"
             elif status == "working":
                 small_img = ICON_WORKING
-                small_txt = status_text or "Agente pensando..."
+                small_txt = status_text or "Agent thinking..."
             else:
                 small_img = ICON_IDLE
-                small_txt = status_text or "Listo (Esperando prompt)"
+                small_txt = status_text or "Ready (Waiting for prompt)"
 
             activity = {
                 "name": app_name,
@@ -365,7 +365,7 @@ def run_daemon():
             elif status == "tool":
                 state = sess.get("state", "Running tool...")
             else:
-                state = sess.get("state", "Idle - Listo")
+                state = sess.get("state", "Idle - Ready")
 
             start_ts = sess.get("start_timestamp", default_session_start)
 

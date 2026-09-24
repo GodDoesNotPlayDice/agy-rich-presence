@@ -97,8 +97,8 @@ def main():
     if event == "SessionStart":
         sessions[agy_pid] = {
             "status": "idle",
-            "status_text": "Listo para programar",
-            "state": "Idle - Listo",
+            "status_text": "Ready to code",
+            "state": "Idle - Ready",
             "project": workspace_name,
             "start_timestamp": int(time.time()),
             "updated_at": time.time()
@@ -106,7 +106,7 @@ def main():
     elif event == "PreInvocation":
         sessions[agy_pid] = {
             "status": "working",
-            "status_text": "Pensando / Generando respuesta",
+            "status_text": "Thinking / Generating response",
             "state": "Agent Working...",
             "project": workspace_name,
             "start_timestamp": int(time.time()),
@@ -117,7 +117,7 @@ def main():
         tool_name = tool_call.get("name", "tool")
         sessions[agy_pid] = {
             "status": "tool",
-            "status_text": f"Ejecutando: {tool_name}",
+            "status_text": f"Running: {tool_name}",
             "state": f"Running {tool_name}",
             "project": workspace_name,
             "start_timestamp": start_ts,
@@ -126,8 +126,8 @@ def main():
     elif event in ("PostInvocation", "Stop"):
         sessions[agy_pid] = {
             "status": "idle",
-            "status_text": "Listo - Esperando prompt",
-            "state": "Idle - Esperando prompt",
+            "status_text": "Ready - Waiting for prompt",
+            "state": "Idle - Waiting for prompt",
             "project": workspace_name,
             "start_timestamp": start_ts,
             "updated_at": time.time()
