@@ -199,10 +199,46 @@ switch (command) {
     setTimeout(startDaemon, 500);
     break;
 
+  case 'icon': {
+    const choice = (args[1] || '').toLowerCase().trim();
+    const cfgFile = path.join(CONFIG_DIR, 'discord_rpc_config.json');
+    let currentCfg = { client_id: '1552488482918899722', app_name: 'Antigravity', icon: 'antigravity' };
+    if (fs.existsSync(cfgFile)) {
+      try {
+        currentCfg = JSON.parse(fs.readFileSync(cfgFile, 'utf-8'));
+      } catch {}
+    }
+
+    if (!choice) {
+      const currentIcon = currentCfg.icon || 'antigravity';
+      console.log(`\n🎨 Current Presence Icon: ${currentIcon.toUpperCase()}`);
+      console.log(`Available options:`);
+      console.log(`   - antigravity (Official Google Antigravity arch logo)`);
+      console.log(`   - gemini      (Google Gemini 4-pointed star)`);
+      console.log(`\nUsage: npx agy-rich-presence icon <antigravity|gemini>\n`);
+      break;
+    }
+
+    if (choice !== 'antigravity' && choice !== 'gemini') {
+      console.error(`\n❌ Invalid icon "${choice}". Please choose either "antigravity" or "gemini".\n`);
+      break;
+    }
+
+    if (!fs.existsSync(CONFIG_DIR)) {
+      fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    }
+    currentCfg.icon = choice;
+    fs.writeFileSync(cfgFile, JSON.stringify(currentCfg, null, 2));
+    console.log(`\n✅ Presence icon updated to: ${choice.toUpperCase()}`);
+    console.log(`✨ The background daemon will hot-reload automatically!\n`);
+    break;
+  }
+
   case 'config':
   case 'set': {
     const newClientId = args[1];
-    const newAppName = args.slice(2).join(' ') || undefined;
+    const newAppName = args[2] && !['antigravity', 'gemini'].includes(args[2].toLowerCase()) ? args[2] : undefined;
+    const newIcon = [args[2], args[3]].find(a => a && ['antigravity', 'gemini'].includes(a.toLowerCase()));
 
     if (!newClientId) {
       console.log('\n⚙️  Current Configuration:');
@@ -212,13 +248,14 @@ switch (command) {
           const cfg = JSON.parse(fs.readFileSync(cfgFile, 'utf-8'));
           console.log(`   Client ID : ${cfg.client_id || 'Default'}`);
           console.log(`   App Name  : ${cfg.app_name || 'Default'}`);
+          console.log(`   Icon      : ${cfg.icon || 'antigravity'}`);
         } catch {
           console.log('   (Unable to read config file)');
         }
       } else {
         console.log('   (Using default configuration)');
       }
-      console.log('\nUsage: npx agy-rich-presence config <client_id> [app_name]\n');
+      console.log('\nUsage: npx agy-rich-presence config <client_id> [app_name] [antigravity|gemini]\n');
       break;
     }
 
@@ -226,7 +263,7 @@ switch (command) {
       fs.mkdirSync(CONFIG_DIR, { recursive: true });
     }
     const cfgFile = path.join(CONFIG_DIR, 'discord_rpc_config.json');
-    let currentCfg = { client_id: newClientId, app_name: 'Antigravity' };
+    let currentCfg = { client_id: newClientId, app_name: 'Antigravity', icon: 'antigravity' };
     if (fs.existsSync(cfgFile)) {
       try {
         currentCfg = JSON.parse(fs.readFileSync(cfgFile, 'utf-8'));
@@ -236,10 +273,14 @@ switch (command) {
     if (newAppName) {
       currentCfg.app_name = newAppName;
     }
+    if (newIcon) {
+      currentCfg.icon = newIcon.toLowerCase();
+    }
     fs.writeFileSync(cfgFile, JSON.stringify(currentCfg, null, 2));
     console.log(`\n✅ Configuration updated:`);
     console.log(`   Client ID : ${currentCfg.client_id}`);
     console.log(`   App Name  : ${currentCfg.app_name}`);
+    console.log(`   Icon      : ${currentCfg.icon || 'antigravity'}`);
     console.log(`✨ The background daemon will hot-reload automatically!\n`);
     break;
   }
@@ -266,7 +307,8 @@ Commands:
   start        Start background daemon
   stop         Stop background daemon
   restart      Restart background daemon
-  config       View or update client_id and app_name
+  icon         Switch presence icon (antigravity or gemini)
+  config       View or update client_id, app_name, and icon
   uninstall    Completely remove plugin
     `);
     break;

@@ -27,13 +27,16 @@ USER_CONFIG_FILE = os.path.join(CONFIG_DIR, "discord_rpc_config.json")
 DEFAULT_CONFIG_FILE = os.path.join(PLUGIN_ROOT, "config.json")
 
 # Verified assets compatible with Discord image proxy
-GEMINI_LOGO_URL = "https://i.imgur.com/YrOxqad.png"
+LOGO_GEMINI = "https://i.imgur.com/YrOxqad.png"
+LOGO_ANTIGRAVITY = "https://i.imgur.com/K18LV68.png"
+
 ICON_IDLE = "https://i.imgur.com/uixaTPM.png"       # 🟢 Minimalist Green Dot
 ICON_WORKING = "https://i.imgur.com/jjXT03E.png"    # 🟡 Minimalist Yellow Dot
 ICON_TOOL = "https://i.imgur.com/4axLLtM.png"       # 🟠 Minimalist Orange Dot
 
 DEFAULT_CLIENT_ID = "1552488482918899722"
 DEFAULT_APP_NAME = "Antigravity"
+DEFAULT_ICON_THEME = "antigravity"
 
 def load_user_config():
     target_files = [USER_CONFIG_FILE, DEFAULT_CONFIG_FILE]
@@ -42,13 +45,17 @@ def load_user_config():
             try:
                 with open(cfg, "r") as f:
                     data = json.load(f)
+                    icon_val = str(data.get("icon", DEFAULT_ICON_THEME)).strip().lower()
+                    if icon_val not in ("antigravity", "gemini"):
+                        icon_val = DEFAULT_ICON_THEME
                     return (
                         data.get("client_id", DEFAULT_CLIENT_ID),
-                        data.get("app_name", DEFAULT_APP_NAME)
+                        data.get("app_name", DEFAULT_APP_NAME),
+                        icon_val
                     )
             except Exception:
                 pass
-    return DEFAULT_CLIENT_ID, DEFAULT_APP_NAME
+    return DEFAULT_CLIENT_ID, DEFAULT_APP_NAME, DEFAULT_ICON_THEME
 
 if sys.platform == "win32":
     try:
@@ -185,7 +192,7 @@ class DiscordRPC:
                 pass
             self.sock = None
 
-    def set_activity(self, app_name, details, state, start_timestamp, status="idle", status_text=None):
+    def set_activity(self, app_name, details, state, start_timestamp, status="idle", status_text=None, icon_theme="antigravity"):
         if not self.connected:
             if not self.connect():
                 return False
@@ -200,12 +207,14 @@ class DiscordRPC:
                 small_img = ICON_IDLE
                 small_txt = status_text or "Ready (Waiting for prompt)"
 
+            large_img = LOGO_ANTIGRAVITY if icon_theme == "antigravity" else LOGO_GEMINI
+
             activity = {
                 "name": app_name,
                 "details": (details or "Antigravity CLI")[:128],
                 "state": (state or "Active")[:128],
                 "assets": {
-                    "large_image": GEMINI_LOGO_URL,
+                    "large_image": large_img,
                     "large_text": app_name,
                     "small_image": small_img,
                     "small_text": small_txt[:128]
@@ -437,7 +446,7 @@ def run_daemon():
     with open(PID_FILE, "w") as f:
         f.write(str(pid))
 
-    client_id, app_name = load_user_config()
+    client_id, app_name, icon_theme = load_user_config()
     rpc = DiscordRPC(client_id)
 
     def cleanup(signum=None, frame=None):
@@ -463,11 +472,12 @@ def run_daemon():
 
     while True:
         try:
-            curr_client_id, curr_app_name = load_user_config()
+            curr_client_id, curr_app_name, curr_icon_theme = load_user_config()
             if curr_client_id != rpc.client_id:
                 rpc.clear_activity()
                 rpc = DiscordRPC(curr_client_id)
             app_name = curr_app_name
+            icon_theme = curr_icon_theme
 
             all_agy = get_all_running_agy()
 
@@ -538,7 +548,7 @@ def run_daemon():
 
             start_ts = sess.get("start_timestamp", default_session_start)
 
-            current_key = (app_name, details, state, status, status_text, project_name, rpc.connected)
+            current_key = (app_name, details, state, status, status_text, project_name, icon_theme, rpc.connected)
             if current_key != last_sent_activity or not rpc.connected:
                 success = rpc.set_activity(
                     app_name=app_name,
@@ -546,7 +556,8 @@ def run_daemon():
                     state=state,
                     start_timestamp=start_ts,
                     status=status,
-                    status_text=status_text
+                    status_text=status_text,
+                    icon_theme=icon_theme
                 )
                 if success:
                     last_sent_activity = current_key

@@ -82,6 +82,10 @@ You can view or update your configuration at any time:
 # View current config
 npx agy-rich-presence config
 
+# Switch icon theme (antigravity or gemini)
+npx agy-rich-presence icon antigravity
+npx agy-rich-presence icon gemini
+
 # Set custom Client ID and App Name
 npx agy-rich-presence config <YOUR_CLIENT_ID> "Antigravity"
 ```
@@ -91,9 +95,29 @@ Or manually edit `~/.gemini/antigravity-cli/discord_rpc_config.json`:
 ```json
 {
   "client_id": "1552488482918899722",
-  "app_name": "Antigravity better all <3"
+  "app_name": "Antigravity",
+  "icon": "antigravity"
 }
 ```
+
+### 🎨 Switching Presence Icons (Antigravity vs. Gemini)
+
+You can toggle the presence icon on the fly with instant daemon hot-reloading:
+
+- **`antigravity`** (Default): Official Google Antigravity colorful arch logo.
+- **`gemini`**: Minimalist Google Gemini 4-pointed gradient star.
+
+```bash
+# Toggle to Gemini star
+npx agy-rich-presence icon gemini
+
+# Toggle back to Antigravity arch
+npx agy-rich-presence icon antigravity
+```
+
+Both 512x512 transparent PNG assets are included in [`assets/`](assets/):
+- [`assets/antigravity.png`](assets/antigravity.png)
+- [`assets/gemini.png`](assets/gemini.png)
 
 ### 🎨 Customizing the Channel / Voice Member List Icon
 In Discord, the small badge icon displayed on the far right of your username in voice channels and server member lists is the **Application Icon** registered in the Discord Developer Portal.
@@ -115,7 +139,9 @@ To set your own custom icon (e.g. Google Gemini star):
 ```text
 agy-rich-presence/
 ├── assets/
-│   └── logo.png                # Gemini star icon asset (512x512)
+│   ├── antigravity.png         # Official Antigravity arch logo (512x512)
+│   ├── gemini.png              # Google Gemini star logo (512x512)
+│   └── logo.png                # Default icon asset (512x512)
 ├── bin/
 │   └── cli.js                  # CLI installer and management tool
 ├── scripts/
