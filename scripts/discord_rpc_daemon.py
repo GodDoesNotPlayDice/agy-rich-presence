@@ -34,9 +34,16 @@ ICON_IDLE = "https://i.imgur.com/uixaTPM.png"       # 🟢 Minimalist Green Dot
 ICON_WORKING = "https://i.imgur.com/jjXT03E.png"    # 🟡 Minimalist Yellow Dot
 ICON_TOOL = "https://i.imgur.com/4axLLtM.png"       # 🟠 Minimalist Orange Dot
 
-DEFAULT_CLIENT_ID = "1552488482918899722"
+DEFAULT_CLIENT_ID_ANTIGRAVITY = "1552496441656873172"
+DEFAULT_CLIENT_ID_GEMINI = "1552488482918899722"
 DEFAULT_APP_NAME = "Antigravity"
 DEFAULT_ICON_THEME = "antigravity"
+
+KNOWN_DEFAULT_CLIENT_IDS = {
+    DEFAULT_CLIENT_ID_ANTIGRAVITY,
+    DEFAULT_CLIENT_ID_GEMINI,
+    "1510513707073929367"
+}
 
 def load_user_config():
     target_files = [USER_CONFIG_FILE, DEFAULT_CONFIG_FILE]
@@ -48,14 +55,21 @@ def load_user_config():
                     icon_val = str(data.get("icon", DEFAULT_ICON_THEME)).strip().lower()
                     if icon_val not in ("antigravity", "gemini"):
                         icon_val = DEFAULT_ICON_THEME
+
+                    configured_client_id = data.get("client_id")
+                    if not configured_client_id or configured_client_id in KNOWN_DEFAULT_CLIENT_IDS:
+                        active_client_id = DEFAULT_CLIENT_ID_ANTIGRAVITY if icon_val == "antigravity" else DEFAULT_CLIENT_ID_GEMINI
+                    else:
+                        active_client_id = configured_client_id
+
                     return (
-                        data.get("client_id", DEFAULT_CLIENT_ID),
+                        active_client_id,
                         data.get("app_name", DEFAULT_APP_NAME),
                         icon_val
                     )
             except Exception:
                 pass
-    return DEFAULT_CLIENT_ID, DEFAULT_APP_NAME, DEFAULT_ICON_THEME
+    return DEFAULT_CLIENT_ID_ANTIGRAVITY, DEFAULT_APP_NAME, DEFAULT_ICON_THEME
 
 if sys.platform == "win32":
     try:

@@ -202,7 +202,11 @@ switch (command) {
   case 'icon': {
     const choice = (args[1] || '').toLowerCase().trim();
     const cfgFile = path.join(CONFIG_DIR, 'discord_rpc_config.json');
-    let currentCfg = { client_id: '1552488482918899722', app_name: 'Antigravity', icon: 'antigravity' };
+    const CLIENT_ID_ANTIGRAVITY = '1552496441656873172';
+    const CLIENT_ID_GEMINI = '1552488482918899722';
+    const KNOWN_DEFAULT_IDS = [CLIENT_ID_ANTIGRAVITY, CLIENT_ID_GEMINI, '1510513707073929367'];
+
+    let currentCfg = { client_id: CLIENT_ID_ANTIGRAVITY, app_name: 'Antigravity', icon: 'antigravity' };
     if (fs.existsSync(cfgFile)) {
       try {
         currentCfg = JSON.parse(fs.readFileSync(cfgFile, 'utf-8'));
@@ -228,8 +232,13 @@ switch (command) {
       fs.mkdirSync(CONFIG_DIR, { recursive: true });
     }
     currentCfg.icon = choice;
+    if (!currentCfg.client_id || KNOWN_DEFAULT_IDS.includes(currentCfg.client_id)) {
+      currentCfg.client_id = (choice === 'antigravity') ? CLIENT_ID_ANTIGRAVITY : CLIENT_ID_GEMINI;
+    }
+
     fs.writeFileSync(cfgFile, JSON.stringify(currentCfg, null, 2));
     console.log(`\n✅ Presence icon updated to: ${choice.toUpperCase()}`);
+    console.log(`   Discord Client ID : ${currentCfg.client_id}`);
     console.log(`✨ The background daemon will hot-reload automatically!\n`);
     break;
   }
