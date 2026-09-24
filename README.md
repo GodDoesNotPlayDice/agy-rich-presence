@@ -26,7 +26,11 @@
 Choose whichever method you prefer:
 
 ### Option A: Via `npx` (Recommended)
-If you have Node.js installed:
+Run directly from GitHub without cloning:
+```bash
+npx github:GodDoesNotPlayDice/agy-rich-presence
+```
+Or via the global npm package:
 ```bash
 npx agy-rich-presence
 ```
