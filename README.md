@@ -36,11 +36,6 @@ npx agy-rich-presence
 curl -fsSL https://raw.githubusercontent.com/GodDoesNotPlayDice/agy-rich-presence/main/install.sh | bash
 ```
 
-### Option C: Manual Git Clone
-```bash
-git clone https://github.com/GodDoesNotPlayDice/agy-rich-presence.git ~/.gemini/config/plugins/agy-rich-presence
-```
-
 ---
 
 ## 🛠️ CLI Management Commands
