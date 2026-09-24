@@ -72,7 +72,17 @@ npx agy-rich-presence uninstall
 
 ## ⚙️ Customization
 
-You can customize the presence title or use your own Discord Application ID by editing `~/.gemini/antigravity-cli/discord_rpc_config.json`:
+You can view or update your configuration at any time:
+
+```bash
+# View current config
+npx agy-rich-presence config
+
+# Set custom Client ID and App Name
+npx agy-rich-presence config <YOUR_CLIENT_ID> "Antigravity"
+```
+
+Or manually edit `~/.gemini/antigravity-cli/discord_rpc_config.json`:
 
 ```json
 {
@@ -81,7 +91,18 @@ You can customize the presence title or use your own Discord Application ID by e
 }
 ```
 
-> **Note:** If you create a custom application in the [Discord Developer Portal](https://discord.com/developers/applications), put your Application ID in `"client_id"` and your desired name in `"app_name"`.
+### 🎨 Customizing the Channel / Voice Member List Icon
+In Discord, the small badge icon displayed on the far right of your username in voice channels and server member lists is the **Application Icon** registered in the Discord Developer Portal.
+
+To set your own custom icon (e.g. Google Gemini star):
+1. Visit the [Discord Developer Portal](https://discord.com/developers/applications) and click **New Application**.
+2. Give it a name (e.g., `Antigravity`).
+3. Under **App Icon**, upload [`assets/logo.png`](assets/logo.png) (or your own favorite image).
+4. Save Changes, copy your **Application ID**, and run:
+   ```bash
+   npx agy-rich-presence config <YOUR_APPLICATION_ID> "Antigravity"
+   ```
+5. The background daemon will hot-reload instantly—no restart needed!
 
 ---
 
@@ -89,6 +110,8 @@ You can customize the presence title or use your own Discord Application ID by e
 
 ```text
 agy-rich-presence/
+├── assets/
+│   └── logo.png                # Gemini star icon asset (512x512)
 ├── bin/
 │   └── cli.js                  # CLI installer and management tool
 ├── scripts/

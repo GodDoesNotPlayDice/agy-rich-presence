@@ -153,6 +153,51 @@ switch (command) {
     setTimeout(startDaemon, 500);
     break;
 
+  case 'config':
+  case 'set': {
+    const newClientId = args[1];
+    const newAppName = args.slice(2).join(' ') || undefined;
+
+    if (!newClientId) {
+      console.log('\n⚙️  Current Configuration:');
+      const cfgFile = path.join(CONFIG_DIR, 'discord_rpc_config.json');
+      if (fs.existsSync(cfgFile)) {
+        try {
+          const cfg = JSON.parse(fs.readFileSync(cfgFile, 'utf-8'));
+          console.log(`   Client ID : ${cfg.client_id || 'Default'}`);
+          console.log(`   App Name  : ${cfg.app_name || 'Default'}`);
+        } catch {
+          console.log('   (Unable to read config file)');
+        }
+      } else {
+        console.log('   (Using default configuration)');
+      }
+      console.log('\nUsage: npx agy-rich-presence config <client_id> [app_name]\n');
+      break;
+    }
+
+    if (!fs.existsSync(CONFIG_DIR)) {
+      fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    }
+    const cfgFile = path.join(CONFIG_DIR, 'discord_rpc_config.json');
+    let currentCfg = { client_id: newClientId, app_name: 'Antigravity' };
+    if (fs.existsSync(cfgFile)) {
+      try {
+        currentCfg = JSON.parse(fs.readFileSync(cfgFile, 'utf-8'));
+      } catch {}
+    }
+    currentCfg.client_id = newClientId;
+    if (newAppName) {
+      currentCfg.app_name = newAppName;
+    }
+    fs.writeFileSync(cfgFile, JSON.stringify(currentCfg, null, 2));
+    console.log(`\n✅ Configuration updated:`);
+    console.log(`   Client ID : ${currentCfg.client_id}`);
+    console.log(`   App Name  : ${currentCfg.app_name}`);
+    console.log(`✨ The background daemon will hot-reload automatically!\n`);
+    break;
+  }
+
   case 'uninstall':
     console.log('\n🗑️  Uninstalling Antigravity Discord RPC...');
     stopDaemon();
@@ -175,6 +220,7 @@ Commands:
   start        Start background daemon
   stop         Stop background daemon
   restart      Restart background daemon
+  config       View or update client_id and app_name
   uninstall    Completely remove plugin
     `);
     break;

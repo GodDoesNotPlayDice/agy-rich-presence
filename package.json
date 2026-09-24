@@ -1,6 +1,6 @@
 {
   "name": "agy-rich-presence",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Discord Rich Presence for Google Antigravity CLI",
   "bin": {
     "agy-rich-presence": "bin/cli.js"
@@ -8,6 +8,7 @@
   "files": [
     "bin",
     "scripts",
+    "assets",
     "config.json",
     "plugin.json",
     "hooks.json",
