@@ -558,7 +558,7 @@ def run_daemon():
                 except Exception:
                     sessions = {}
 
-            # Detect which agy instance is in the focused window
+            # Detect focused agy process, prioritizing an active working agy if focused is idle
             active_win_pid = get_active_window_pid()
             focused_agy = None
             if active_win_pid:
@@ -568,8 +568,25 @@ def run_daemon():
                         focused_agy = all_agy[d]
                         break
 
+            # Find any background agy instance that is actively working (status != idle)
+            active_working_agy = None
+            for pid, a in all_agy.items():
+                s = sessions.get(str(pid), {})
+                if s.get("status") and s.get("status") != "idle":
+                    active_working_agy = a
+                    break
+
             if focused_agy:
-                target_agy = focused_agy
+                focused_sess = sessions.get(str(focused_agy["pid"]), {})
+                if focused_sess.get("status") and focused_sess.get("status") != "idle":
+                    target_agy = focused_agy
+                elif active_working_agy:
+                    target_agy = active_working_agy
+                else:
+                    target_agy = focused_agy
+                last_active_pid = target_agy["pid"]
+            elif active_working_agy:
+                target_agy = active_working_agy
                 last_active_pid = target_agy["pid"]
             elif last_active_pid and last_active_pid in all_agy:
                 target_agy = all_agy[last_active_pid]
@@ -578,33 +595,63 @@ def run_daemon():
                 target_agy = foreground_ones[0] if foreground_ones else list(all_agy.values())[0]
                 last_active_pid = target_agy["pid"]
 
-            # Formulate activity params
+            # Formulate activity params for selected agy
             target_pid_str = str(target_agy["pid"])
             sess = sessions.get(target_pid_str, {})
-
             status = sess.get("status", "idle")
             status_text = sess.get("status_text", None)
             current_action = sess.get("state") or status_text
 
-            # 1. Unique projects calculation across all running agy instances
-            unique_projects = []
-            for a in all_agy.values():
-                p = a.get("project")
-                s = sessions.get(str(a.get("pid")))
-                if s and s.get("project"):
-                    p = s.get("project")
-                if p and p not in ("Workspace", "root", "Antigravity CLI") and p not in unique_projects:
-                    unique_projects.append(p)
+            # 1. Project status calculation across all running agy instances
+            projects_status = {}
+            for pid, agy_info in all_agy.items():
+                proj = agy_info.get("project")
+                s = sessions.get(str(pid), {})
+                if s.get("project"):
+                    proj = s.get("project")
+                if not proj or proj in ("Workspace", "root"):
+                    proj = target_agy.get("project", "Antigravity CLI")
 
-            if len(unique_projects) > 1:
-                details = f"Working on {len(unique_projects)} projects"
-                large_text = f"Projects: {', '.join(unique_projects)}"
-            elif len(unique_projects) == 1:
-                details = f"Working on {unique_projects[0]}"
-                large_text = f"{app_name} ({unique_projects[0]})"
+                st = s.get("status", "idle")
+                if proj not in projects_status:
+                    projects_status[proj] = []
+                projects_status[proj].append(st)
+
+            all_unique_projects = list(projects_status.keys())
+            working_projects = [
+                p for p, statuses in projects_status.items()
+                if any(s != "idle" for s in statuses)
+            ]
+
+            num_total = len(all_unique_projects)
+            num_working = len(working_projects)
+
+            if num_working == 0:
+                # All projects are idle
+                status = "idle"
+                if num_total > 1:
+                    details = f"{num_total} projects active"
+                elif num_total == 1:
+                    details = "1 project active"
+                else:
+                    details = "Antigravity CLI active"
+                large_text = f"Projects ({num_total}): {', '.join(all_unique_projects)}" if num_total > 1 else app_name
+                small_status_text = "Ready (Waiting for prompt)"
+            elif num_working == 1:
+                # Exactly 1 project is being worked on
+                working_proj_name = working_projects[0]
+                if num_total > 1:
+                    details = f"Working on 1 project ({working_proj_name})"
+                    large_text = f"Projects ({num_total}): {', '.join(all_unique_projects)} | Working: {working_proj_name}"
+                else:
+                    details = f"Working on {working_proj_name}"
+                    large_text = f"{app_name} ({working_proj_name})"
+                small_status_text = current_action or status_text or "Agent working..."
             else:
-                details = f"Working on {target_agy.get('project', 'Antigravity CLI')}"
-                large_text = app_name
+                # 2 or more projects actively being worked on simultaneously
+                details = f"Working on {num_working} projects"
+                large_text = f"Projects ({num_total}) | Working on: {', '.join(working_projects)}"
+                small_status_text = current_action or status_text or f"Working on {num_working} projects"
 
             # 2. Activity metrics counters (edits, cmds, searches, reads, thinks, time deep)
             total_edits = cumulative_stats.get("edits", 0)
@@ -638,9 +685,6 @@ def run_daemon():
             state = " · ".join(state_parts)
             if len(state) > 128:
                 state = state[:125] + "..."
-
-            # Hover tooltip on small status dot shows the active tool/action
-            small_status_text = current_action or status_text
 
             start_ts = sess.get("start_timestamp", session_start_ts)
 

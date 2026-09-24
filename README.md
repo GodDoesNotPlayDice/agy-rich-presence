@@ -15,7 +15,10 @@
   - 🟠 **Orange (`Executing`):** Running terminal commands, tests, or background tasks (`Running: npm test`).
   - 🔷 **Cyan (`Searching`):** Searching the web or exploring the codebase graph (`Searching: <query>`).
 - 📊 **Multi-Project Counting & Live Activity Metrics:**
-  - **Smart Unique Project Counting:** If multiple CLI terminals are open across projects (e.g. 3 terminals running with 2 in project A and 1 in project B), it intelligently deduplicates and displays `Working on 2 projects`. If working in 1 project, it displays `Working on <project_name>`.
+  - **Dynamic Project States:** 
+    - **When all projects are idle:** Displays `{N} projects active` (e.g. `2 projects active`, `5 projects active`).
+    - **When only 1 project is actively working:** Displays `Working on 1 project (<project_name>)` (e.g. `Working on 1 project (agy-rich-presence)`).
+    - **When 2 or more projects are working simultaneously:** Displays `Working on {N} projects` (e.g. `Working on 2 projects`).
   - **Live Coding Counters:** Tracks cumulative actions across all open CLI sessions in real-time on your Discord profile:
     `3 edits · 17 cmds · 10 searches · 31 reads · 7 thinks · 13m deep`
   - **Informative Tooltips:** Hovering over the large app logo reveals all active project names (`Projects: frontend, backend`), while hovering over the status dot shows the active file or command being processed (`Reading app.py`, `Running: npm test`).
