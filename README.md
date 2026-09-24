@@ -1,4 +1,4 @@
-# Antigravity Discord Rich Presence 🚀
+# Antigravity Discord Rich Presence CLI 🚀
 
 > Real-time Discord Rich Presence integration for **Google Antigravity CLI** (`agy`). Displays your active project, agent state, and elapsed session time on your Discord profile.
 
