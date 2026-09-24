@@ -32,8 +32,8 @@ ICON_IDLE = "https://i.imgur.com/uixaTPM.png"       # 🟢 Minimalist Green Dot
 ICON_WORKING = "https://i.imgur.com/jjXT03E.png"    # 🟡 Minimalist Yellow Dot
 ICON_TOOL = "https://i.imgur.com/4axLLtM.png"       # 🟠 Minimalist Orange Dot
 
-DEFAULT_CLIENT_ID = "1510513707073929367"
-DEFAULT_APP_NAME = "Antigravity better all <3"
+DEFAULT_CLIENT_ID = "1552488482918899722"
+DEFAULT_APP_NAME = "Antigravity"
 
 def load_user_config():
     target_files = [USER_CONFIG_FILE, DEFAULT_CONFIG_FILE]

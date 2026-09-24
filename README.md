@@ -86,7 +86,7 @@ Or manually edit `~/.gemini/antigravity-cli/discord_rpc_config.json`:
 
 ```json
 {
-  "client_id": "1510513707073929367",
+  "client_id": "1552488482918899722",
   "app_name": "Antigravity better all <3"
 }
 ```
