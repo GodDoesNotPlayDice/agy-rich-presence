@@ -257,34 +257,81 @@ def main():
     curr_sess = sessions.get(agy_pid, {})
     start_ts = curr_sess.get("start_timestamp", int(time.time()))
 
+    # Load / initialize cumulative stats
+    cumulative_stats = state_data.get("cumulative_stats", {
+        "edits": 0, "cmds": 0, "searches": 0, "reads": 0, "thinks": 0
+    })
+    if not isinstance(cumulative_stats, dict):
+        cumulative_stats = {"edits": 0, "cmds": 0, "searches": 0, "reads": 0, "thinks": 0}
+    for k in ("edits", "cmds", "searches", "reads", "thinks"):
+        if k not in cumulative_stats:
+            cumulative_stats[k] = 0
+
+    session_start_ts = state_data.get("session_start_timestamp", int(time.time()))
+    last_act = state_data.get("last_activity_timestamp", time.time())
+
+    # If all sessions were inactive for > 15 minutes, reset cumulative session stats
+    if time.time() - last_act > 900:
+        cumulative_stats = {"edits": 0, "cmds": 0, "searches": 0, "reads": 0, "thinks": 0}
+        session_start_ts = int(time.time())
+
+    # Per-session stats
+    stats = curr_sess.get("stats", {
+        "edits": 0, "cmds": 0, "searches": 0, "reads": 0, "thinks": 0
+    })
+    if not isinstance(stats, dict):
+        stats = {"edits": 0, "cmds": 0, "searches": 0, "reads": 0, "thinks": 0}
+    for k in ("edits", "cmds", "searches", "reads", "thinks"):
+        if k not in stats:
+            stats[k] = 0
+
     if event == "SessionStart":
+        stats = {"edits": 0, "cmds": 0, "searches": 0, "reads": 0, "thinks": 0}
         sessions[agy_pid] = {
             "status": "idle",
             "status_text": "Ready to code",
             "state": "Idle - Ready",
             "project": workspace_name,
             "start_timestamp": int(time.time()),
-            "updated_at": time.time()
+            "updated_at": time.time(),
+            "stats": stats
         }
     elif event == "PreInvocation":
+        stats["thinks"] = stats.get("thinks", 0) + 1
+        cumulative_stats["thinks"] = cumulative_stats.get("thinks", 0) + 1
         sessions[agy_pid] = {
             "status": "working",
             "status_text": "Thinking / Generating response",
             "state": "Thinking...",
             "project": workspace_name,
             "start_timestamp": start_ts,
-            "updated_at": time.time()
+            "updated_at": time.time(),
+            "stats": stats
         }
     elif event == "PreToolUse":
         tool_call = payload.get("toolCall", {})
         status, status_text, state = parse_tool_activity(tool_call)
+        if status == "reading":
+            stats["reads"] = stats.get("reads", 0) + 1
+            cumulative_stats["reads"] = cumulative_stats.get("reads", 0) + 1
+        elif status == "editing":
+            stats["edits"] = stats.get("edits", 0) + 1
+            cumulative_stats["edits"] = cumulative_stats.get("edits", 0) + 1
+        elif status in ("executing", "tool"):
+            stats["cmds"] = stats.get("cmds", 0) + 1
+            cumulative_stats["cmds"] = cumulative_stats.get("cmds", 0) + 1
+        elif status == "searching":
+            stats["searches"] = stats.get("searches", 0) + 1
+            cumulative_stats["searches"] = cumulative_stats.get("searches", 0) + 1
+
         sessions[agy_pid] = {
             "status": status,
             "status_text": status_text,
             "state": state,
             "project": workspace_name,
             "start_timestamp": start_ts,
-            "updated_at": time.time()
+            "updated_at": time.time(),
+            "stats": stats
         }
     elif event == "PostToolUse":
         sessions[agy_pid] = {
@@ -293,7 +340,8 @@ def main():
             "state": "Thinking...",
             "project": workspace_name,
             "start_timestamp": start_ts,
-            "updated_at": time.time()
+            "updated_at": time.time(),
+            "stats": stats
         }
     elif event in ("PostInvocation", "Stop"):
         sessions[agy_pid] = {
@@ -302,7 +350,8 @@ def main():
             "state": "Idle - Ready",
             "project": workspace_name,
             "start_timestamp": start_ts,
-            "updated_at": time.time()
+            "updated_at": time.time(),
+            "stats": stats
         }
 
     # Clean up stale sessions
@@ -315,6 +364,9 @@ def main():
         except Exception:
             pass
     state_data["sessions"] = clean_sessions
+    state_data["cumulative_stats"] = cumulative_stats
+    state_data["session_start_timestamp"] = session_start_ts
+    state_data["last_activity_timestamp"] = time.time()
 
     os.makedirs(CONFIG_DIR, exist_ok=True)
     try:

@@ -168,6 +168,19 @@ def find_discord_socket():
             return p
     return None
 
+def format_time_deep(seconds):
+    seconds = max(0, int(seconds))
+    if seconds < 60:
+        return f"{seconds}s deep"
+    mins = seconds // 60
+    if mins < 60:
+        return f"{mins}m deep"
+    hours = mins // 60
+    rem_mins = mins % 60
+    if rem_mins > 0:
+        return f"{hours}h {rem_mins}m deep"
+    return f"{hours}h deep"
+
 class DiscordRPC:
     def __init__(self, client_id):
         self.client_id = client_id
@@ -210,7 +223,7 @@ class DiscordRPC:
                 pass
             self.sock = None
 
-    def set_activity(self, app_name, details, state, start_timestamp, status="idle", status_text=None, icon_theme="antigravity"):
+    def set_activity(self, app_name, details, state, start_timestamp, status="idle", status_text=None, icon_theme="antigravity", large_text=None):
         if not self.connected:
             if not self.connect():
                 return False
@@ -238,6 +251,7 @@ class DiscordRPC:
                 small_txt = status_text or "Ready (Waiting for prompt)"
 
             large_img = LOGO_ANTIGRAVITY if icon_theme == "antigravity" else LOGO_GEMINI
+            large_txt = (large_text or app_name)[:128]
 
             activity = {
                 "name": app_name,
@@ -245,7 +259,7 @@ class DiscordRPC:
                 "state": (state or "Active")[:128],
                 "assets": {
                     "large_image": large_img,
-                    "large_text": app_name,
+                    "large_text": large_txt,
                     "small_image": small_img,
                     "small_text": small_txt[:128]
                 },
@@ -530,13 +544,17 @@ def run_daemon():
             was_active = True
             standby_start_time = None
 
-            # Read sessions state
+            # Read sessions state and cumulative stats
             sessions = {}
+            cumulative_stats = {}
+            session_start_ts = default_session_start
             if os.path.exists(STATE_FILE):
                 try:
                     with open(STATE_FILE, "r") as sf:
                         state_json = json.load(sf)
                         sessions = state_json.get("sessions", {})
+                        cumulative_stats = state_json.get("cumulative_stats", {})
+                        session_start_ts = state_json.get("session_start_timestamp", default_session_start)
                 except Exception:
                     sessions = {}
 
@@ -566,32 +584,67 @@ def run_daemon():
 
             status = sess.get("status", "idle")
             status_text = sess.get("status_text", None)
-            project_name = target_agy["project"]
-            details = f"Project: {project_name}"
+            current_action = sess.get("state") or status_text
 
-            state = sess.get("state")
-            if not state:
-                if status == "reading":
-                    state = "Reading files..."
-                elif status == "editing":
-                    state = "Editing code..."
-                elif status == "executing":
-                    state = "Executing command..."
-                elif status == "searching":
-                    state = "Searching..."
-                elif status == "working":
-                    state = "Thinking..."
-                elif status == "tool":
-                    state = "Running tool..."
-                else:
-                    state = "Idle - Ready"
+            # 1. Unique projects calculation across all running agy instances
+            unique_projects = []
+            for a in all_agy.values():
+                p = a.get("project")
+                s = sessions.get(str(a.get("pid")))
+                if s and s.get("project"):
+                    p = s.get("project")
+                if p and p not in ("Workspace", "root", "Antigravity CLI") and p not in unique_projects:
+                    unique_projects.append(p)
 
+            if len(unique_projects) > 1:
+                details = f"Working on {len(unique_projects)} projects"
+                large_text = f"Projects: {', '.join(unique_projects)}"
+            elif len(unique_projects) == 1:
+                details = f"Working on {unique_projects[0]}"
+                large_text = f"{app_name} ({unique_projects[0]})"
+            else:
+                details = f"Working on {target_agy.get('project', 'Antigravity CLI')}"
+                large_text = app_name
+
+            # 2. Activity metrics counters (edits, cmds, searches, reads, thinks, time deep)
+            total_edits = cumulative_stats.get("edits", 0)
+            total_cmds = cumulative_stats.get("cmds", 0)
+            total_searches = cumulative_stats.get("searches", 0)
+            total_reads = cumulative_stats.get("reads", 0)
+            total_thinks = cumulative_stats.get("thinks", 0)
+
+            active_edits = sum(s.get("stats", {}).get("edits", 0) for s in sessions.values())
+            active_cmds = sum(s.get("stats", {}).get("cmds", 0) for s in sessions.values())
+            active_searches = sum(s.get("stats", {}).get("searches", 0) for s in sessions.values())
+            active_reads = sum(s.get("stats", {}).get("reads", 0) for s in sessions.values())
+            active_thinks = sum(s.get("stats", {}).get("thinks", 0) for s in sessions.values())
+
+            total_edits = max(total_edits, active_edits)
+            total_cmds = max(total_cmds, active_cmds)
+            total_searches = max(total_searches, active_searches)
+            total_reads = max(total_reads, active_reads)
+            total_thinks = max(total_thinks, active_thinks)
+
+            elapsed_seconds = max(0, int(time.time() - session_start_ts))
+
+            state_parts = [
+                f"{total_edits} edit" if total_edits == 1 else f"{total_edits} edits",
+                f"{total_cmds} cmd" if total_cmds == 1 else f"{total_cmds} cmds",
+                f"{total_searches} search" if total_searches == 1 else f"{total_searches} searches",
+                f"{total_reads} read" if total_reads == 1 else f"{total_reads} reads",
+                f"{total_thinks} think" if total_thinks == 1 else f"{total_thinks} thinks",
+                format_time_deep(elapsed_seconds)
+            ]
+            state = " · ".join(state_parts)
             if len(state) > 128:
                 state = state[:125] + "..."
 
-            start_ts = sess.get("start_timestamp", default_session_start)
+            # Hover tooltip on small status dot shows the active tool/action
+            small_status_text = current_action or status_text
 
-            current_key = (app_name, details, state, status, status_text, project_name, icon_theme, rpc.connected)
+            start_ts = sess.get("start_timestamp", session_start_ts)
+
+            current_key = (app_name, details, state, status, small_status_text, icon_theme, large_text, rpc.connected)
             if current_key != last_sent_activity or not rpc.connected:
                 success = rpc.set_activity(
                     app_name=app_name,
@@ -599,8 +652,9 @@ def run_daemon():
                     state=state,
                     start_timestamp=start_ts,
                     status=status,
-                    status_text=status_text,
-                    icon_theme=icon_theme
+                    status_text=small_status_text,
+                    icon_theme=icon_theme,
+                    large_text=large_text
                 )
                 if success:
                     last_sent_activity = current_key
