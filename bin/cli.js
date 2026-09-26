@@ -219,12 +219,14 @@ switch (command) {
       console.log(`Available options:`);
       console.log(`   - antigravity (Official Google Antigravity arch logo)`);
       console.log(`   - gemini      (Google Gemini 4-pointed star)`);
-      console.log(`\nUsage: npx agy-rich-presence icon <antigravity|gemini>\n`);
+      console.log(`   - claude      (Anthropic Claude logo)`);
+      console.log(`   - auto        (Auto-detect: switches between Gemini/Claude based on active model)`);
+      console.log(`\nUsage: npx agy-rich-presence icon <antigravity|gemini|claude|auto>\n`);
       break;
     }
 
-    if (choice !== 'antigravity' && choice !== 'gemini') {
-      console.error(`\n❌ Invalid icon "${choice}". Please choose either "antigravity" or "gemini".\n`);
+    if (!['antigravity', 'gemini', 'claude', 'auto'].includes(choice)) {
+      console.error(`\n❌ Invalid icon "${choice}". Please choose: antigravity, gemini, claude, or auto.\n`);
       break;
     }
 
@@ -233,11 +235,12 @@ switch (command) {
     }
     currentCfg.icon = choice;
     if (!currentCfg.client_id || KNOWN_DEFAULT_IDS.includes(currentCfg.client_id)) {
-      currentCfg.client_id = (choice === 'antigravity') ? CLIENT_ID_ANTIGRAVITY : CLIENT_ID_GEMINI;
+      currentCfg.client_id = (choice === 'gemini') ? CLIENT_ID_GEMINI : CLIENT_ID_ANTIGRAVITY;
     }
 
     fs.writeFileSync(cfgFile, JSON.stringify(currentCfg, null, 2));
-    console.log(`\n✅ Presence icon updated to: ${choice.toUpperCase()}`);
+    const autoNote = choice === 'auto' ? ' (switches between Gemini/Claude automatically)' : '';
+    console.log(`\n✅ Presence icon updated to: ${choice.toUpperCase()}${autoNote}`);
     console.log(`   Discord Client ID : ${currentCfg.client_id}`);
     console.log(`✨ The background daemon will hot-reload automatically!\n`);
     break;
@@ -246,8 +249,8 @@ switch (command) {
   case 'config':
   case 'set': {
     const newClientId = args[1];
-    const newAppName = args[2] && !['antigravity', 'gemini'].includes(args[2].toLowerCase()) ? args[2] : undefined;
-    const newIcon = [args[2], args[3]].find(a => a && ['antigravity', 'gemini'].includes(a.toLowerCase()));
+    const newAppName = args[2] && !['antigravity', 'gemini', 'claude', 'auto'].includes(args[2].toLowerCase()) ? args[2] : undefined;
+    const newIcon = [args[2], args[3]].find(a => a && ['antigravity', 'gemini', 'claude', 'auto'].includes(a.toLowerCase()));
 
     if (!newClientId) {
       console.log('\n⚙️  Current Configuration:');
@@ -264,7 +267,7 @@ switch (command) {
       } else {
         console.log('   (Using default configuration)');
       }
-      console.log('\nUsage: npx agy-rich-presence config <client_id> [app_name] [antigravity|gemini]\n');
+      console.log('\nUsage: npx agy-rich-presence config <client_id> [app_name] [antigravity|gemini|claude|auto]\n');
       break;
     }
 
@@ -316,7 +319,7 @@ Commands:
   start        Start background daemon
   stop         Stop background daemon
   restart      Restart background daemon
-  icon         Switch presence icon (antigravity or gemini)
+  icon         Switch presence icon (antigravity, gemini, claude, or auto)
   config       View or update client_id, app_name, and icon
   uninstall    Completely remove plugin
     `);

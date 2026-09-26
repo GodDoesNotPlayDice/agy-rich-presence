@@ -29,6 +29,7 @@ DEFAULT_CONFIG_FILE = os.path.join(PLUGIN_ROOT, "config.json")
 # Verified assets compatible with Discord image proxy
 LOGO_GEMINI = "https://i.imgur.com/YrOxqad.png"
 LOGO_ANTIGRAVITY = "https://i.imgur.com/XSSjEth.png"
+LOGO_CLAUDE = "https://i.imgur.com/gCQdTjC.png"      # Claude / Anthropic icon
 
 ICON_IDLE = "https://i.imgur.com/uixaTPM.png"       # 🟢 Minimalist Green Dot
 ICON_WORKING = "https://i.imgur.com/jjXT03E.png"    # 🟡 Minimalist Yellow Dot
@@ -57,12 +58,12 @@ def load_user_config():
                 with open(cfg, "r") as f:
                     data = json.load(f)
                     icon_val = str(data.get("icon", DEFAULT_ICON_THEME)).strip().lower()
-                    if icon_val not in ("antigravity", "gemini"):
+                    if icon_val not in ("antigravity", "gemini", "claude", "auto"):
                         icon_val = DEFAULT_ICON_THEME
 
                     configured_client_id = data.get("client_id")
                     if not configured_client_id or configured_client_id in KNOWN_DEFAULT_CLIENT_IDS:
-                        active_client_id = DEFAULT_CLIENT_ID_ANTIGRAVITY if icon_val == "antigravity" else DEFAULT_CLIENT_ID_GEMINI
+                        active_client_id = DEFAULT_CLIENT_ID_ANTIGRAVITY if icon_val in ("antigravity", "auto", "claude") else DEFAULT_CLIENT_ID_GEMINI
                     else:
                         active_client_id = configured_client_id
 
@@ -250,7 +251,7 @@ class DiscordRPC:
                 small_img = ICON_IDLE
                 small_txt = status_text or "Ready (Waiting for prompt)"
 
-            large_img = LOGO_ANTIGRAVITY if icon_theme == "antigravity" else LOGO_GEMINI
+            large_img = LOGO_ANTIGRAVITY if icon_theme == "antigravity" else (LOGO_CLAUDE if icon_theme == "claude" else (LOGO_GEMINI if icon_theme == "gemini" else LOGO_ANTIGRAVITY))
             large_txt = (large_text or app_name)[:128]
 
             activity = {
@@ -685,7 +686,18 @@ def run_daemon():
 
             start_ts = sess.get("start_timestamp", session_start_ts)
 
-            current_key = (app_name, details, state, status, small_status_text, icon_theme, large_text, rpc.connected)
+            # Resolve effective icon_theme based on detected model (for "auto" mode)
+            effective_icon_theme = icon_theme
+            if icon_theme == "auto":
+                detected_model = sess.get("model", "").lower()
+                if "claude" in detected_model:
+                    effective_icon_theme = "claude"
+                elif "gemini" in detected_model:
+                    effective_icon_theme = "gemini"
+                else:
+                    effective_icon_theme = "antigravity"
+
+            current_key = (app_name, details, state, status, small_status_text, effective_icon_theme, large_text, rpc.connected)
             if current_key != last_sent_activity or not rpc.connected:
                 success = rpc.set_activity(
                     app_name=app_name,
@@ -694,7 +706,7 @@ def run_daemon():
                     start_timestamp=start_ts,
                     status=status,
                     status_text=small_status_text,
-                    icon_theme=icon_theme,
+                    icon_theme=effective_icon_theme,
                     large_text=large_text
                 )
                 if success:

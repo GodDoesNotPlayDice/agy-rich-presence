@@ -257,6 +257,9 @@ def main():
     curr_sess = sessions.get(agy_pid, {})
     start_ts = curr_sess.get("start_timestamp", int(time.time()))
 
+    # Detect active model from payload; fallback to previously stored value
+    model_name = payload.get("modelName") or curr_sess.get("model", "")
+
     # Load / initialize cumulative stats
     cumulative_stats = state_data.get("cumulative_stats", {
         "edits": 0, "cmds": 0, "searches": 0, "reads": 0, "thinks": 0
@@ -292,6 +295,7 @@ def main():
             "status_text": "Ready to code",
             "state": "Idle - Ready",
             "project": workspace_name,
+            "model": model_name,
             "start_timestamp": int(time.time()),
             "updated_at": time.time(),
             "stats": stats
@@ -304,6 +308,7 @@ def main():
             "status_text": "Thinking / Generating response",
             "state": "Thinking...",
             "project": workspace_name,
+            "model": model_name,
             "start_timestamp": start_ts,
             "updated_at": time.time(),
             "stats": stats
@@ -329,6 +334,7 @@ def main():
             "status_text": status_text,
             "state": state,
             "project": workspace_name,
+            "model": model_name,
             "start_timestamp": start_ts,
             "updated_at": time.time(),
             "stats": stats
@@ -339,6 +345,7 @@ def main():
             "status_text": "Thinking / Analyzing results",
             "state": "Thinking...",
             "project": workspace_name,
+            "model": model_name,
             "start_timestamp": start_ts,
             "updated_at": time.time(),
             "stats": stats
@@ -349,6 +356,7 @@ def main():
             "status_text": "Ready - Waiting for prompt",
             "state": "Idle - Ready",
             "project": workspace_name,
+            "model": model_name,
             "start_timestamp": start_ts,
             "updated_at": time.time(),
             "stats": stats
